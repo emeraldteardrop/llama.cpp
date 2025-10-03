@@ -48,12 +48,6 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
 
-      - name: ccache
-        uses: ggml-org/ccache-action@v1.2.16
-        with:
-          key: ubuntu-22-cmake-sycl
-          evict-old-files: 1d
-
       - name: Build
         id: cmake_build
         run: |
