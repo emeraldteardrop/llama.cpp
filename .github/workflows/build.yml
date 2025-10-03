@@ -58,4 +58,11 @@ jobs:
             -DCMAKE_CXX_COMPILER=icpx
           cmake --build build --config Release -j $(nproc)
 
+      - name: Upload build folder as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-artifacts
+          path: build/
+          retention-days: 7
+
   
