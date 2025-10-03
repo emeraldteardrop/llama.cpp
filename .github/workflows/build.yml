@@ -61,7 +61,7 @@ jobs:
       - name: Upload build folder as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: compiled-artifacts
+          name: sycl-build-$GITHUB_REF
           path: build/
           retention-days: 7
 
