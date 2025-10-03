@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  workflow_dispatch: # allows manual triggering
+  push:
+    branches:
+      - master
+    paths: [
+      '.github/workflows/build.yml',
+      '.github/workflows/build-linux-cross.yml',
+      '.github/workflows/build-cmake-pkg.yml',
+      '**/CMakeLists.txt',
+      '**/.cmake',
+      '**/*.h',
+      '**/*.hpp',
+      '**/*.c',
+      '**/*.cpp',
+      '**/*.cu',
+      '**/*.cuh',
+      '**/*.swift',
+      '**/*.m',
+      '**/*.metal',
+      '**/*.comp'
+    ]
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths: [
+      '.github/workflows/build.yml',
+      '.github/workflows/build-linux-cross.yml',
+      '.github/workflows/build-cmake-pkg.yml',
+      '**/CMakeLists.txt',
+      '**/.cmake',
+      '**/*.h',
+      '**/*.hpp',
+      '**/*.c',
+      '**/*.cpp',
+      '**/*.cu',
+      '**/*.cuh',
+      '**/*.swift',
+      '**/*.m',
+      '**/*.metal',
+      '**/*.comp'
+    ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  GGML_NLOOP: 3
+  GGML_N_THREADS: 1
+  LLAMA_LOG_COLORS: 1
+  LLAMA_LOG_PREFIX: 1
+  LLAMA_LOG_TIMESTAMPS: 1
+
+jobs:
+  ubuntu-22-cmake-sycl:
+    runs-on: ubuntu-22.04
+
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: add oneAPI to apt
+        shell: bash
+        run: |
+          cd /tmp
+          wget https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          sudo apt-key add GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          rm GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB
+          sudo add-apt-repository "deb https://apt.repos.intel.com/oneapi all main"
+
+      - name: install oneAPI dpcpp compiler
+        shell: bash
+        run: |
+          sudo apt update
+          sudo apt install intel-oneapi-compiler-dpcpp-cpp libcurl4-openssl-dev
+
+      - name: install oneAPI MKL library
+        shell: bash
+        run: |
+          sudo apt install intel-oneapi-mkl-devel
+
+      - name: Clone
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: ubuntu-22-cmake-sycl
+          evict-old-files: 1d
+
+      - name: Build
+        id: cmake_build
+        run: |
+          source /opt/intel/oneapi/setvars.sh
+          cmake -B build \
+            -DGGML_SYCL=ON \
+            -DCMAKE_C_COMPILER=icx \
+            -DCMAKE_CXX_COMPILER=icpx
+          cmake --build build --config Release -j $(nproc)
+
+  
